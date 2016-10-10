@@ -17,9 +17,9 @@ resource "aws_cloudwatch_metric_alarm" "disk" {
   # The disk util tool we use sets the following dimensions
   # (although filesystem + MountPath look redundant for me)
   dimensions {
-    Filesystem="/dev/xvda1"
+    Filesystem="/dev/xvdb"
     InstanceId= "${element(aws_instance.storage_node.*.id,count.index)}"
-    MountPath="/"
+    MountPath="${var.storage_dir}"
   }
 }
 

@@ -12,6 +12,8 @@ variable "owner" {}
 variable "key_name" {}
 variable "ssh_keypath"{}
 
+variable "user_data" {default = ""}
+
 // TODO we are making assumptions that this is a Amazon
 // linux ami, thus we should look up ourselves, not have it passed in
 
@@ -35,13 +37,13 @@ output "storage_ips" {
 
 data "template_file" "crontab" {
     template = <<CRON
-*/${metric_interval} * * * * /usr/local/bin/aws-scripts-mon/mon-put-instance-data.pl --mem-util --disk-space-util --disk-path=/ --from-cron
+*/${metric_interval} * * * * /usr/local/bin/aws-scripts-mon/mon-put-instance-data.pl --mem-util --disk-space-util --disk-path=${storage_dir} --from-cron
 CRON
   vars {
     metric_interval = "${var.metric_interval}"
+    storage_dir = "${var.storage_dir}"
   }
 }
-
 
 module "amazon_ami" {
   source = "github.com/jmahowald/tf_aws_ami"
@@ -49,7 +51,9 @@ module "amazon_ami" {
 }
 
 resource "aws_instance" "storage_node" {
+  user_data = "${var.user_data}"
   ami = "${module.amazon_ami.ami_id}"
+
   subnet_id = "${var.subnet_id}"
   instance_type = "${var.instance_type}"
   key_name = "${var.key_name}"
@@ -66,14 +70,6 @@ resource "aws_instance" "storage_node" {
     Environment = "${var.environment}"
     Role = "${var.role_name}"
     Backups = "${var.backup_and_retention}"
-  }
-
-  root_block_device {
-    volume_type = "${var.volume_type}"
-    volume_size = "${var.volume_size_gb}"
-
-    //For storage nodes, we like persistence
-    delete_on_termination = false
   }
 
   connection {
